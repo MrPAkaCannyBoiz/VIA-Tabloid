@@ -1,0 +1,16 @@
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# IntelliJ / Rider
+.idea/
+*.iml
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
