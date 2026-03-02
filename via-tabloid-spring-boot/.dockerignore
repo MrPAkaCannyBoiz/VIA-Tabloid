@@ -1,0 +1,10 @@
+target
+.git
+.idea
+.mvn/wrapper/maven-wrapper.properties
+.DS_Store
+*.iml
+test
+junit
+.env
+
