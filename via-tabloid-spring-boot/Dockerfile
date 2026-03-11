@@ -1,24 +1,13 @@
 # Stage 1: Build the application
-FROM eclipse-temurin:25-jdk-alpine AS build
-WORKDIR /app
-
-# Copy maven executable and project definition
-COPY mvnw .
-COPY .mvn .mvn
+FROM maven:3.9.11-eclipse-temurin-25 AS build
+WORKDIR /src
 COPY pom.xml .
-
-# Grant execution rights on the mvnw and fix line endings
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
-
-
-# Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN ./mvnw dependency:go-offline
 
 # Copy the source code
 COPY src src
-
+# then set the working directory to src to build the application
 # Build the application
-RUN ./mvnw package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Stage 2: Create the runtime image
 FROM eclipse-temurin:25-jre-alpine

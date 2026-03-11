@@ -3,16 +3,32 @@ services:
     image: postgres:18-trixie
     container_name: postgres_via_tabloid
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${DB_URL}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - ./scripts/init.sql:/docker-entrypoint-initdb/init.sql
-      - ./pgdata:/var/lib/postgresql/data
+      - ./db_data:/var/lib/postgresql/
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME}" ]
       interval: 5s
       timeout: 5s
       retries: 5
+
+
+  via-tabloid-spring-boot:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: via-tabloid-spring-boot
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      postgres_via_tabloid:
+        condition: service_healthy

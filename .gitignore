@@ -14,3 +14,6 @@
 *.user
 *.userosscache
 *.sln.docstates
+
+# database files
+db_data/
