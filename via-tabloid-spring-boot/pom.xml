@@ -111,7 +111,7 @@
                     <protoc>${protobuf-java.version}</protoc>
                     <!-- Point to your shared proto folder -->
                     <sourceDirectories>
-                        <directory>${project.basedir}/../../Shared_proto</directory>
+                        <directory>${project.basedir}/../contracts</directory>
                     </sourceDirectories>
                     <binaryMavenPlugins>
                         <binaryMavenPlugin>
