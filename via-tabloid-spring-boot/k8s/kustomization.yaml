@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# List all your standard Kubernetes YAML files here
+resources:
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+  - postgres-cm0-configmap.yaml
+  - via-tabloid-spring-boot-deployment.yaml
+  - via-tabloid-spring-boot-service.yaml
+
+# This tells Kustomize to generate a Secret named 'db-credentials'
+# using the contents of your .env file
+secretGenerator:
+  - name: via-tabloid-secrets
+    envs:
+      - .env

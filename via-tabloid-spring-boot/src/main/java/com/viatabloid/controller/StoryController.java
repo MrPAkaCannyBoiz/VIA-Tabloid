@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
+@RestController
 @RequestMapping("api/stories")
 public class StoryController
 {
@@ -34,7 +34,7 @@ public class StoryController
     {
         // for testing purpose, we will just return the first story
         var stories = storyRepository.findAll();
-        List<StoryDto> storyDtos = stories.stream()
+        var storyDtos = stories.stream()
                 .map(story -> new StoryDto(story.getTitle(),
                         story.getDescription(),
                         story.getDepartment().getId()))
