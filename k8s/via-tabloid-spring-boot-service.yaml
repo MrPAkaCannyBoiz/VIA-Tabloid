@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: via-tabloid-spring-boot
+  name: via-tabloid-spring-boot
+spec:
+  type: NodePort
+  ports:
+    - name: "8080"
+      port: 8080
+      targetPort: 8080
+      nodePort: 30808
+  selector:
+    io.kompose.service: via-tabloid-spring-boot

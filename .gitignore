@@ -1,5 +1,6 @@
 .env
 .env.*
+secrets.env
 
 # VS Code
 .vscode/
@@ -20,3 +21,5 @@ db_data/
 
 # prompts
 prompts/
+
+.claude
