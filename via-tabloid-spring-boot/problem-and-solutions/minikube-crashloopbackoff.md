@@ -89,7 +89,8 @@ Two bugs in `k8s/postgres-deployment.yaml`:
 # Before
 volumeMounts:
   - mountPath: /docker-entrypoint-initdb/init.sql
-
+```
+```yaml
 # After
 volumeMounts:
   - mountPath: /docker-entrypoint-initdb.d/init.sql

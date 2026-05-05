@@ -20,7 +20,7 @@ services:
 
   via-tabloid-spring-boot:
     build:
-      context: .. # two levels up to include contracts
+      context: . 
       dockerfile: ./via-tabloid-spring-boot/Dockerfile
     container_name: via-tabloid-spring-boot
     ports:

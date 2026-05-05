@@ -17,3 +17,6 @@
 
 # database files
 db_data/
+
+# prompts
+prompts/
