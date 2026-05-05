@@ -23,3 +23,8 @@ create table stories
 alter table stories
     owner to postgres;
 
+insert into departments (name) values
+    ('Software Engineer'),
+    ('Climate and Supply'),
+    ('Construction');
+

@@ -1,5 +1,5 @@
 package com.viatabloid.dto;
 
-public record StoryDto(String title, String description, int departmentId)
+public record StoryDto(Integer id, String title, String description, int departmentId)
 {
 }
