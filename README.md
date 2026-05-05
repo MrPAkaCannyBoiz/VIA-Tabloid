@@ -231,3 +231,13 @@ GitHub Actions workflow at `.github/workflows/ci-cd-workflow.yaml`:
 
 - **CI** (all branches): runs Maven tests, builds backend and frontend Docker images
 - **CD** (main branch only): starts Minikube, loads images, applies `k8s/` manifests, verifies rollout
+
+### Required GitHub Secrets
+
+`k8s/secrets.env` is git-ignored and generated at deploy time from repository secrets. Add these in **Settings → Secrets and variables → Actions**:
+
+| Secret name | Value |
+|-------------|-------|
+| `DB_USERNAME` | `postgres` |
+| `DB_PASSWORD` | `[your password as your wish]` |
+| `DB_URL_DOCKER` | `jdbc:postgresql://postgres:5432/via_tabloid` |

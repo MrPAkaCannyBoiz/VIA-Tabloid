@@ -87,6 +87,14 @@ jobs:
           minikube image load /tmp/backend.tar
           minikube image load /tmp/frontend.tar
 
+      - name: Create k8s/secrets.env from GitHub Secrets
+        run: |
+          cat > k8s/secrets.env <<EOF
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_URL_DOCKER=${{ secrets.DB_URL_DOCKER }}
+          EOF
+
       - name: Apply Kubernetes manifests
         run: kubectl apply -k k8s/
 
