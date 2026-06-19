@@ -95,14 +95,7 @@ jobs:
           DB_URL_DOCKER=${{ secrets.DB_URL_DOCKER }}
           EOF
 
-      - name: Apply Kubernetes manifests
-        run: kubectl apply -k k8s/
-
-      - name: Wait for backend rollout
-        run: kubectl rollout status deployment/via-tabloid-spring-boot --timeout=120s
-
-      - name: Wait for frontend rollout
-        run: kubectl rollout status deployment/frontend --timeout=120s
-
-      - name: Verify pods
-        run: kubectl get pods
+      - name: Apply manifests and wait for rollout
+        env:
+          ROLLOUT_TIMEOUT: 120s
+        run: bash scripts/k8s/03-apply-k8s.sh
