@@ -14,7 +14,8 @@ VIA-Tabloid/
 ├── via-tabloid-spring-boot/       # Spring Boot REST API
 ├── k8s/                           # Kubernetes manifests (Kustomize)
 ├── scripts/
-│   └── init.sql                   # Database schema
+│   ├── init.sql                   # Database schema
+│   └── k8s/                       # Minikube build / load / deploy bash scripts
 ├── docker-compose.yml
 └── .env                           # Local environment variables
 ```
@@ -80,37 +81,78 @@ docker compose down -v
 
 ## Option 2 — Kubernetes with Minikube
 
-### 1. Start Minikube
+The app deployments use `imagePullPolicy: Never`, so the images must already exist **inside**
+the Minikube cluster before you apply the manifests. The flow is always:
+**build → load into Minikube → apply**. Skipping the load step leaves the pods stuck in
+`ErrImageNeverPull`.
+
+### Quick start (scripts)
+
+Helper scripts live in `scripts/k8s/`. The one-command deploy builds the images, starts
+Minikube (if it isn't already running), loads the images into the cluster, and applies the
+manifests — then prints the frontend and backend URLs:
+
+```bash
+bash scripts/k8s/deploy-all.sh
+```
+
+Prefer to run the steps individually? Each script is self-contained:
+
+| Script | What it does |
+|--------|--------------|
+| `scripts/k8s/01-build-images.sh` | Builds the backend and frontend images against the host Docker daemon |
+| `scripts/k8s/02-start-minikube-and-load.sh` | Starts Minikube if it isn't running, then loads both images into the cluster |
+| `scripts/k8s/03-apply-k8s.sh` | Applies `k8s/`, restarts the app deployments, and waits for the rollouts |
+| `scripts/k8s/deploy-all.sh` | Runs all three of the above in order |
+
+> Re-running `deploy-all.sh` is safe: it rebuilds the images, reloads them, and restarts
+> **only** the app deployments — never PostgreSQL, which has no persistent volume and would
+> lose its data on restart.
+
+### Manual steps
+
+If you'd rather run the commands yourself:
+
+#### 1. Start Minikube
 
 ```bash
 minikube start
 ```
 
-### 2. Point your terminal's Docker to Minikube's daemon
-
-This means images you build will be available inside the cluster (no registry needed).
-
-**Linux / macOS:**
-```bash
-eval $(minikube docker-env)
-```
-
-**Windows PowerShell:**
-```powershell
-& minikube -p minikube docker-env | Invoke-Expression
-```
-
-> Run this in every new terminal session before building images.
-
-### 3. Build the Docker images
+If the API server fails to come up, retry with more resources:
 
 ```bash
-# From the repo root
+minikube start --memory=4096 --cpus=2
+```
+
+#### 2. Build the Docker images
+
+From the repo root, against your host Docker daemon:
+
+```bash
 docker build -t via-tabloid-spring-boot:latest -f via-tabloid-spring-boot/Dockerfile .
 docker build -t via-tabloid-frontend:latest ./frontend
 ```
 
-### 4. Apply Kubernetes manifests
+#### 3. Load the images into Minikube
+
+Because the deployments use `imagePullPolicy: Never`, load the images into the cluster's
+image store **before** applying — otherwise the pods fail with `ErrImageNeverPull`:
+
+```bash
+minikube image load via-tabloid-spring-boot:latest
+minikube image load via-tabloid-frontend:latest
+
+# Verify they're inside the cluster:
+minikube image ls | grep via-tabloid
+```
+
+> **Alternative:** instead of build-then-load, point your shell's Docker CLI at Minikube's
+> daemon and build straight into it — `eval $(minikube docker-env)` (Linux/macOS) or
+> `& minikube -p minikube docker-env | Invoke-Expression` (Windows PowerShell) — then run the
+> `docker build` commands from step 2. Run `eval $(minikube docker-env -u)` to revert.
+
+#### 4. Apply Kubernetes manifests
 
 ```bash
 kubectl apply -k k8s/
@@ -123,7 +165,7 @@ This creates:
 - `via-tabloid-secrets` Secret (from `k8s/secrets.env`)
 - `postgres-cm0` ConfigMap (database init SQL)
 
-### 5. Wait for all pods to be ready
+#### 5. Wait for all pods to be ready
 
 ```bash
 kubectl rollout status deployment/postgres
@@ -137,7 +179,7 @@ Or watch all pods at once:
 kubectl get pods --watch
 ```
 
-### 6. Open the app
+#### 6. Open the app
 
 Get the Minikube IP:
 
@@ -159,7 +201,7 @@ minikube service frontend
 minikube service via-tabloid-spring-boot
 ```
 
-### 7. Useful commands
+#### 7. Useful commands
 
 ```bash
 # See all resources
@@ -182,21 +224,24 @@ kubectl delete -k k8s/
 minikube stop
 ```
 
-### 8. Updating a deployment after code changes
+#### 8. Updating a deployment after code changes
 
-After changing source code, rebuild the image and restart the deployment:
+After changing source code, rebuild the image, **reload it into Minikube**, and restart the
+deployment so the new image is picked up (the `:latest` tag is unchanged, so `apply` alone
+won't recreate the pods):
 
 ```bash
-# Re-point Docker to Minikube (if in a new terminal)
-eval $(minikube docker-env)          # Linux/macOS
-& minikube -p minikube docker-env | Invoke-Expression  # Windows PowerShell
-
 # Rebuild
 docker build -t via-tabloid-spring-boot:latest -f via-tabloid-spring-boot/Dockerfile .
+
+# Reload into the cluster
+minikube image load via-tabloid-spring-boot:latest
 
 # Restart the deployment to pick up the new image
 kubectl rollout restart deployment/via-tabloid-spring-boot
 ```
+
+Or just re-run `bash scripts/k8s/deploy-all.sh`, which does all of this for you.
 
 ---
 
@@ -229,8 +274,10 @@ Base URL: `http://localhost:8080` (Docker Compose) or `http://<minikube-ip>:3080
 
 GitHub Actions workflow at `.github/workflows/ci-cd-workflow.yaml`:
 
-- **CI** (all branches): runs Maven tests, builds backend and frontend Docker images
-- **CD** (main branch only): starts Minikube, loads images, applies `k8s/` manifests, verifies rollout
+- **CI** (all branches): runs Maven tests, then builds the backend and frontend Docker images and uploads them as job artifacts
+- **CD** (`main` only, on push): starts Minikube, downloads the image artifacts and loads them into the cluster, generates `k8s/secrets.env` from repository secrets, then runs `scripts/k8s/03-apply-k8s.sh` to apply the manifests and wait for the rollouts
+
+> The CD job reuses the same `scripts/k8s/03-apply-k8s.sh` as local development (with `ROLLOUT_TIMEOUT=120s`, so a stuck rollout fails the build), keeping the apply/rollout behavior identical in both environments.
 
 ### Required GitHub Secrets
 
